@@ -10,6 +10,7 @@ class FileManage:
         Das Verzeichnis wird gelesen
         :return:
         """
+
         try:
             if os.path.exists(self.dir_location):
                 return True
@@ -96,10 +97,10 @@ class FileManage:
 
 
 # Erstelle ein Objekt mit dem angegebenen Verzeichnispfad
-dir = FileManage("/home/sandor/Downloads")
+dirs = FileManage("/home/sandor/Downloads")
 
 # Liste der Dateierweiterungen
 s = ["jpg", "jpeg", "txt"]
 
 # Zeige das Ergebnis des Verschiebens der Dateien an
-print(dir.file_move(s))
+print(dirs.file_move(s))
