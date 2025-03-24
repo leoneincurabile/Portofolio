@@ -5,7 +5,7 @@ import pandas as pd
 class CostOfLiving:
     def __init__(self):
         """
-        Inițializează obiectul și încarcă datele dintr-un fișier CSV.
+        Initialisiere das Objekt und ladet die Daten aus einer CSV-Datei.
         """
         pd.set_option('display.max_columns', None, 'display.max_rows', None)
         self.folder_path = 'daten'
@@ -13,13 +13,13 @@ class CostOfLiving:
         try:
             self.df = pd.read_csv('Cost_of_Living_Index_by_Country_2024.csv')
         except FileNotFoundError:
-            print("Fișierul nu a fost găsit!")
+            print("Die Datei wurde nicht gefunden.")
             self.df = None
         except pd.errors.ParserError:
-            print("Eroare în formatul fișierului CSV! Asigură-te că este bine formatat.")
+            print("Fehler im CSV-Dateiformat! Bitte stelle sicher, dass es korrekt formatiert ist.")
             self.df = None
         except Exception as e:
-            print(f"Error {str(e)}")
+            print(f"Fehler {str(e)}")
             self.df = None
 
         self.continent_mapping = {
@@ -74,21 +74,21 @@ class CostOfLiving:
 
     def dir_check(self):
         """
-        Verifica daca exista directorul respectiv, daca nu, il creaza
-        :return: True sau error - statusul directorului
+        Überprüfe, ob das Verzeichnis existiert, und estelle es, wenn nicht.
+        :return: True sau Fehler - der Status des Verzeichnisses
         """
         try:
             if not os.path.exists(self.folder_path):
                 os.makedirs(self.folder_path, mode=0o777)
         except Exception as e:
-            return f"Eroare {e}"
+            return f"Fehler {e}"
 
         return True
 
     def add_country(self):
         """
-        Adauga series.pandas cu Continentele pentru a putea fi adaugate in csv
-        :return: dataframe cu informatiile care se adauga in csv
+        Fügen Sie die pandas.series mit den Kontinenten hinzu, damit sie in die CSV-Datei aufgenommen werden können
+        :return: Dataframe mit den Informationen, die in die CSV-Datei hinzufügt werden
         """
         try:
             self.df['Continent'] = self.df['Country'].map(self.continent_mapping)
@@ -96,56 +96,58 @@ class CostOfLiving:
             # Verificăm dacă există țări care nu au fost mapate
             if self.df['Continent'].isnull().any():
                 missing_continents = self.df[self.df['Continent'].isnull()]['Country']
-                return f"Țările fără continent atribuit: {missing_continents.tolist()}"
+                return f"Länder ohne zugewiesenen Kontinent: {missing_continents.tolist()}"
 
             return self.df
         except KeyError:
-            return "Eroare: O țară nu există în mapa 'continent_mapping'."
+            return "Fehler: Ein Land existiert nicht in der Mappe 'continent_mapping'."
         except Exception as e:
-            return f"Eroare necunoscută: {e}"
+            return f"Unbekannter Fehler: {e}"
 
     @staticmethod
     def save_country_to_csv(file_c_save:pd.DataFrame, file_name_c_save:str):
         """
-        Salveaza datele din fine_c_name in csv
-        :param file_c_save: (Dataframe) Toate datele care se introduc in csv
-        :param file_name_c_save: (str) Nume fisier
-        :return: (str) statusul procesului de salvare a Continentelor
+        Speichere die Daten aus fine_c_name in einer CSV-Datei.
+        :param file_c_save: (Dataframe) Alle Daten, die in die CSV-Datei eingetragen werden.
+        :param file_name_c_save: (str) Der Dateiname
+        :return: (str) der Status des Speichervorgangs der Kontinente
         """
 
         try:
             file_c_save.to_csv(file_name_c_save, mode='w', header=True, index=False)
-            return f"Datele cu Continent au fost adaugate in fisierul {file_name_c_save}"
+            return f"Die Daten mit Kontinent wurden der Datei ({file_name_c_save}) hinzugefägt."
         except AttributeError:
-            return f"Nu exista Tara pentru Continentul asociat"
+            return f"Es gibt kein Land für den zugeordneten Kontinent."
         except Exception as e:
-            return f"Error {str(e)}"
+            return f"Fehler {str(e)}"
 
     def top_10_high_cost_country(self, cost_of_living:int):
         """
-        Afiseaza top 10 tari, cu continente si Cost_of_Living, sortat dupa Cost_of_Living
-        :param cost_of_living: int - valoarea minimă a Cost of Living Index
-        :return: tuple (DataFrame sau None, str) - un tuple care conține un DataFrame cu top 10 țări și un string cu numele fișierului
+        Zeige die Top 10 Länder mit Kontinent und Lebenshaltungskosten, sortiert nach den Lebenshaltungskosten.
+        :param cost_of_living: int - der minimale Wert des Lebenshaltungskostenindex.
+        :return: tuple (DataFrame sau None, str) - ein Tupel, das ein DataFrame mit den Top 10 Ländern und
+        einen String mit dem Dateinamen enthält.
         """
 
         if not isinstance(cost_of_living, int):
-            return None, f"Cost of living trebuie să fie un număr întreg!"
+            return None, f"Die Lebenshaltungskosten müssen eine ganze Zahl sein!"
 
         if not isinstance(self.df, pd.DataFrame):
-            return None, f"Trebuie un Dataframe"
+            return None, f"Es muss ein DataFrame sein."
 
         self.df['Cost of Living Index'] = pd.to_numeric(self.df['Cost of Living Index'], errors='coerce')
         if self.df['Cost of Living Index'].isnull().any():
-            return ValueError, f"Lipsesc valori pentru Cost of Living Index"
+            return ValueError, f"Es fehlen Werte für den Cost of Living Index"
 
-        # selectam Continent, Country, Cost of Living Index, unde Cost of Living Index este mai mare decat cel cerut
+        # Wählen Sie Kontinent, Land, Lebenshaltungskostenindex, wobei der Lebenshaltungskostenindex größer ist als
+        # der angeforderte Wert
         high_cost = self.df[(self.df['Cost of Living Index'] > cost_of_living)][['Continent','Country',
                                                                                  'Cost of Living Index']]
 
-        # sorteaza dupa Cost of Liging Index descrescator si selecteaza doar primele 10
+        # Sortiere nach dem Lebenshaltungskostenindex in absteigender Reihenfolge und wähle nur die ersten 10 aus
         high_cost = high_cost.sort_values(by='Cost of Living Index', ascending=False).head(10)
 
-        # resetam indexul si incepem de la 1
+        # Setzen Sie den Index zurück und beginnen Sie bei 1
         high_cost.reset_index(drop=True, inplace = True)
         high_cost.index +=1
 
@@ -153,10 +155,10 @@ class CostOfLiving:
 
     def save_file(self, file_data : pd.DataFrame, file_name_saved:str):
         """
-        Salveaza fisierul cu datele incarcate. Trebuie sa contina prima data un dataframe, si pe urma numele fisierului
-        :param file_data: dataframe - toate datele care se introduc in csv
-        :param file_name_saved: str - numele fisierului de tip .csv
-        :return: tuple (bool, str) - statusul salvarii fisierului
+        # Speichern Sie die Datei mit den geladenen Daten. Sie muss zuerst ein DataFrame und dann den Dateinamen enthalten.
+        :param file_data: dataframe - alle Daten, die in die CSV-Datei eingefügt werden
+        :param file_name_saved: str - der Dateiname der CSV-Datei
+        :return: tuple (bool, str) - der Status des Speicherns der Datei
         """
         file_path = ''
         if self.dir_check() is True:
@@ -164,50 +166,50 @@ class CostOfLiving:
             file_path = os.path.join(current_dir, self.folder_path, file_name_saved)
 
         if not isinstance(file_name_saved, str):
-            return None, "Numele fisier incorect"
+            return None, "Falscher Dateiname"
 
         if not isinstance(file_data, pd.DataFrame):
             if ValueError:
-                return None, "Lipsesc Date Din table"
+                return None, "Fehlende Daten in der Tabelle"
 
         f_nan = file_data.isna().any()
         if True in f_nan.values:
-            return None, "Lipsesc date importante din table!"
+            return None, "Wichtige Daten fehlen in der Tabelle!"
 
         if file_path:
             try:
                 file_data.to_csv(file_path, index=True, index_label="Index")
-                return True, f"Fisier salvat cu denumirea: {file_name_saved}"
+                return True, f"Datei wurde unter dem Namen gespeichert: {file_name_saved}"
             except Exception as e:
-                 return False, f"Error ocurred {str(e)}"
+                 return False, f"Fehler {str(e)}"
         else:
-            return False, f"Directorul nu a fost creat sau nu este valid"
+            return False, f"Das Verzeichnis wurde nicht erstellt oder ist ungültig."
 
     def __str__(self):
         """
-        Afiseaza informatii legat din baza de date, adica nr total de tari si cate variabile sunt calculate
+        Zeige Informationen aus der Datenbank an, d.h. die Gesamtzahl der Länder und
+        wie viele Variablen berechnet wurden.
         :return:
         """
-        return f"Objectul CostOfLiving cu {len(self.df)} tari si {self.df.shape[1]} variabile"
+        return f"Das Objekt CostOfLiving mit {len(self.df)} Ländern und {self.df.shape[1]} Variablen"
 
 
-obj = CostOfLiving()  # creare obiect
+obj = CostOfLiving()  # Objekt erstellen
 
-# continentele care se vor adauga
-info_continent = obj.add_country()
-#print("Continent add to csv: ", info_continent)
+# Die Kontinente, die hinzugefügt werden.
+# info_continent = obj.add_country()
+# print("Kontinent zum CSV hinzufügen:", info_continent)
 
-file_name = 'Cost_of_Living_Index_by_Country_2024.csv'
-# toate datele se salveaza in csv
-save_continent = CostOfLiving.save_country_to_csv(info_continent, file_name)
-print("Continent Saved: ", save_continent)
+# file_name = 'Cost_of_Living_Index_by_Country_2024.csv'
+# Alle Daten werden in CSV gespeichert.
+# save_continent = CostOfLiving.save_country_to_csv(info_continent, file_name)
+# print("Kontinent gespeichert:", save_continent)
 
-percents_cost_of_living = 70
-# creare obiect cu top 10 Cost Country Living
-top_10_cost_c = obj.top_10_high_cost_country(percents_cost_of_living)
-#print("Top 10 hight cost country: ", top_10_cost_c)
+# percents_cost_of_living = 70
+# Erstellen Sie ein Objekt mit den Top 10 Ländern nach Lebenshaltungskosten.
+# top_10_cost_c = obj.top_10_high_cost_country(percents_cost_of_living)
+# print("Top 10 der Länder mit den höchsten Lebenshaltungskosten", top_10_cost_c)
 
-# creare obiect pentru salvare date
-save_top_10_cost_c = obj.save_file(top_10_cost_c[0], top_10_cost_c[1])
-print("Save to file: ", save_top_10_cost_c[1])
-
+# Erstellen eines Objekts zum Speichern von Daten
+# save_top_10_cost_c = obj.save_file(top_10_cost_c[0], top_10_cost_c[1])
+# print("In Datei speichern: ", save_top_10_cost_c[1])
