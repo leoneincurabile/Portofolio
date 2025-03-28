@@ -267,7 +267,6 @@ class Diagrams:
 # print(heat_diag_sv)
 
 
-
 # # Zeige das Boxplot-Diagramm
 # box_cost_living = diag.boxplot_cost_living()
 
