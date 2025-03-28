@@ -1,33 +1,29 @@
 # Systembibliothek importieren
 import os.path
 
-import logging
-
 # Externe Bibliothek importieren
 import pandas as pd
 
+# lokal importieren
+from log import setup_logger
 
 class CostOfLiving:
-    # Informationen über Logs.
-    logger = logging.getLogger()  # Erhalte den standardmäßigen Logger.
-    consol_handler = logging.StreamHandler()  # Erstellen eines Handlers für die Konsole.
-    file_handler = logging.FileHandler("statistiken.log")
-
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s") # Die Anzeigeart der Log-Nachrichten
-    consol_handler.setFormatter(formatter)  # Lege das Format des Handlers fest.
-    file_handler.setFormatter(formatter)  # Lege das Format des Handlers fest.
-
-    logger.addHandler(file_handler)  # Erstelle den Handler.
-    logger.addHandler(consol_handler)  # Anzeige in der Konsole.
-    logger.setLevel(logging.INFO)  # Das minimale Log-Level.
+    logger = None
 
     def __init__(self):
         """
-        Initialisiere das Objekt und ladet die Daten aus einer CSV-Datei.
+            Initialisiere das Objekt und ladet die Daten aus einer CSV-Datei.
         """
+
+        # Informationen über Logs.
+        if CostOfLiving.logger is None:
+            CostOfLiving.logger = setup_logger("Statistiken")
+        self.logger = CostOfLiving.logger
+
         # Setze die Anzeige aller Spalten und aller Zeilen
         pd.set_option('display.max_columns', None, 'display.max_rows', None)
         self.folder_path = 'daten'
+
 
         name_file = 'Cost_of_Living_Index_by_Country_2024.csv'
         try:
@@ -161,8 +157,8 @@ class CostOfLiving:
                     return False, None, f"Es gibt keine Kontinente, die zu Ländern hinzugefügt werden müssen."
 
         except Exception as e:
-            self.__class__.logger.error(f"Unbekannter Fehler: {e}")
-            return None, None, f"Unbekannter Fehler: {e}"
+            self.__class__.logger.error(f"Unbekannter Fehler: {e}.")
+            return None, None, f"Unbekannter Fehler: {e}."
 
     @classmethod
     def save_country_to_csv(cls, file_c_save:tuple, file_name_c_save:str):
@@ -344,7 +340,7 @@ class CostOfLiving:
         if isinstance(cleaned_data, pd.DataFrame):
 
             # Anzeigen nur der Spalten mit den erforderlichen Daten
-            cleaned_data =  cleaned_data[['Country','Cost of Living Index', 'Rent Index','Continent']]
+            cleaned_data =  cleaned_data.iloc[:]
 
             # Daten nach Kontinent filtern, wenn angegeben
             if continent:
@@ -362,7 +358,6 @@ class CostOfLiving:
             self.__class__.logger.error("Es ist kein gültiges DataFrame. Die Daten sind nicht bereinigbar.")
             return "Es ist kein gültiges DataFrame."
 
-
     def __str__(self):
         """
         Zeige Informationen aus der Datenbank an, d.h. die Gesamtzahl der Länder und
@@ -370,7 +365,6 @@ class CostOfLiving:
         :return:
         """
         return f"Das Objekt CostOfLiving mit {len(self.df)} Ländern und {self.df.shape[1]} Variablen"
-
 
 # obj = CostOfLiving()  # Objekt erstellen
 #
