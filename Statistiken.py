@@ -1,27 +1,48 @@
 # Systembibliothek importieren
 import os.path
 
+import logging
+
 # Externe Bibliothek importieren
 import pandas as pd
 
 
 class CostOfLiving:
+    # Informationen über Logs.
+    logger = logging.getLogger()  # Erhalte den standardmäßigen Logger.
+    consol_handler = logging.StreamHandler()  # Erstellen eines Handlers für die Konsole.
+    file_handler = logging.FileHandler("statistiken.log")
+
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s") # Die Anzeigeart der Log-Nachrichten
+    consol_handler.setFormatter(formatter)  # Lege das Format des Handlers fest.
+    file_handler.setFormatter(formatter)  # Lege das Format des Handlers fest.
+
+    logger.addHandler(file_handler)  # Erstelle den Handler.
+    logger.addHandler(consol_handler)  # Anzeige in der Konsole.
+    logger.setLevel(logging.INFO)  # Das minimale Log-Level.
+
     def __init__(self):
         """
         Initialisiere das Objekt und ladet die Daten aus einer CSV-Datei.
         """
+        # Setze die Anzeige aller Spalten und aller Zeilen
         pd.set_option('display.max_columns', None, 'display.max_rows', None)
         self.folder_path = 'daten'
 
+        name_file = 'Cost_of_Living_Index_by_Country_2024.csv'
         try:
-            self.df = pd.read_csv('Cost_of_Living_Index_by_Country_2024.csv')
+            self.df = pd.read_csv(name_file)
+            self.__class__.logger.info(f"Die Datei {name_file} wurde erfolgreich geöffnet.")
         except FileNotFoundError:
+            self.__class__.logger.error(f"Die Datei {name_file} wurde nicht gefunden.")
             print("Die Datei wurde nicht gefunden.")
             self.df = None
         except pd.errors.ParserError:
+            self.__class__.logger.error(f"Die Datei {name_file} ist im falschen Format.")
             print("Fehler im CSV-Dateiformat! Bitte stelle sicher, dass es korrekt formatiert ist.")
             self.df = None
         except Exception as e:
+            self.__class__.logger.error(f"Fehler Datei {name_file} {e}.")
             print(f"Fehler {str(e)}")
             self.df = None
 
@@ -83,7 +104,9 @@ class CostOfLiving:
         try:
             if not os.path.exists(self.folder_path):  # Überprüfen, ob das Verzeichnis existiert.
                 os.makedirs(self.folder_path, mode=0o777)  # Erstelle ein Verzeichnis mit den Rechten 777
+                self.__class__.logger.info(f"S-a creat diredtorul: {self.folder_path}")
         except Exception as e:
+            self.__class__.logger.error(f"Fehler bei der Überprüfung/Erstellung des Verzeichnisses: {e}.")
             return f"Fehler {e}"
 
         return True
@@ -102,6 +125,7 @@ class CostOfLiving:
         try:
             # Überprüfe das Format des Datenuploads
             if not isinstance(self.df, pd.DataFrame):
+                self.__class__.logger.error("Die Daten wurden nicht im richtigen Format geladen, bitte überprüfen Sie die Datei.")
                 return None, None, (f"Die Daten wurden nicht im richtigen Format geladen, "
                                     f"bitte überprüfen Sie die Datei.")
 
@@ -112,8 +136,8 @@ class CostOfLiving:
             if 'Continent' not in self.df.columns or self.df['Continent'].isnull().any():
                 # Weist der Spalte 'Continent' den Wert zu, der im Dictionary durch den Länderschlüssel zugeordnet ist.
                 self.df['Continent'] = self.df['Country'].map(self.continent_mapping)
-
-                return True, self.df, f"Zuweisung der Spalte Continent"
+                self.__class__.logger.info("Zuweisung der Spalte Continent")
+                return True, self.df, "Zuweisung der Spalte Continent"
 
             # Überprüfe, ob das Land in continent_mapping mit dem Land in der Datei übereinstimmt,
             # um den Kontinent zuzuordnen.
@@ -130,15 +154,18 @@ class CostOfLiving:
 
                 if len(country_not_found) > 0:
                     # Wir verwenden ausdrücklich pd.Series(), um die Daten im Pandas-Series-Typ zurückzugeben.
+                    self.__class__.logger.warning("Überprüfe den/die Ländernamen in der Datenbank.")
                     return False, pd.Series(country_not_found), f"Überprüfe den/die Ländernamen in der Datenbank."
                 else:
+                    self.__class__.logger.warning("Es gibt keine Kontinente, die zu Ländern hinzugefügt werden müssen.")
                     return False, None, f"Es gibt keine Kontinente, die zu Ländern hinzugefügt werden müssen."
 
         except Exception as e:
+            self.__class__.logger.error(f"Unbekannter Fehler: {e}")
             return None, None, f"Unbekannter Fehler: {e}"
 
-    @staticmethod
-    def save_country_to_csv(file_c_save:tuple, file_name_c_save:str):
+    @classmethod
+    def save_country_to_csv(cls, file_c_save:tuple, file_name_c_save:str):
         """
         Speichere die Daten aus fine_c_name in einer CSV-Datei.
         :param file_c_save: (tuple) - alle Daten, die in die CSV-Datei eingetragen werden.
@@ -152,26 +179,33 @@ class CostOfLiving:
 
             # Überprüfen, ob der Name vom Typ String ist.
             if not isinstance(file_name_c_save, str):
+                cls.logger.error(f"Falscher Dateiname.")
                 return None, f"Falscher Dateiname."
 
             # Wenn die Daten vom Typ DataFrame sind, wird die Datei gespeichert.
             if isinstance(file_data, pd.DataFrame):
                 file_data.to_csv(file_name_c_save, mode='w', header=True, index=False)
+                cls.logger.info(f"Die Daten mit Kontinent wurden der Datei ({file_name_c_save}) hinzugefügt.")
                 return True, f"Die Daten mit Kontinent wurden der Datei ({file_name_c_save}) hinzugefügt."
 
             # Überprüfen, ob die Daten vom Typ Pandas Series sind
             if isinstance(file_data, pd.Series):
+                cls.logger.error(file_text)
                 return None, file_text
 
             # Überprüfen Sie den Status der Dateneingabe.
             if file_status is None:
+                cls.logger.error(f"Kann nicht gespeichert werden.")
                 return None, f"Kann nicht gespeichert werden."
             elif file_status is False:
+                cls.logger.warning(file_text)
                 return None, file_text
 
         except AttributeError:
+            cls.logger.error(f"Es gibt kein Land für den zugeordneten Kontinent.")
             return None, f"Es gibt kein Land für den zugeordneten Kontinent."
         except Exception as e:
+            cls.logger.error(f"Fehler {str(e)}")
             return None, f"Fehler {str(e)}"
 
     def top_10_high_cost_country(self, cost_of_living:int):
@@ -183,13 +217,16 @@ class CostOfLiving:
         """
 
         if not isinstance(cost_of_living, int):
+            self.__class__.logger.error(f"Die Lebenshaltungskosten müssen eine ganze Zahl sein!")
             return None, f"Die Lebenshaltungskosten müssen eine ganze Zahl sein!"
 
         if not isinstance(self.df, pd.DataFrame):
+            self.__class__.logger.error(f"Es muss ein DataFrame sein.")
             return None, f"Es muss ein DataFrame sein."
 
         self.df['Cost of Living Index'] = pd.to_numeric(self.df['Cost of Living Index'], errors='coerce')
         if self.df['Cost of Living Index'].isnull().any():
+            self.__class__.logger.error(f"Es fehlen Werte für den Cost of Living Index")
             return ValueError, f"Es fehlen Werte für den Cost of Living Index"
 
         # Wählen Sie Kontinent, Land, Lebenshaltungskostenindex, wobei der Lebenshaltungskostenindex größer ist als
@@ -204,6 +241,7 @@ class CostOfLiving:
         high_cost.reset_index(drop=True, inplace = True)
         high_cost.index +=1
 
+        self.__class__.logger.info(f"Anzeige von Informationen {self.top_10_high_cost_country.__name__}")
         return high_cost, 'top 10 high cost country.csv'
 
     def save_file(self, file_data:pd.DataFrame, file_name_saved:str):
@@ -222,10 +260,12 @@ class CostOfLiving:
             file_path = os.path.join(current_dir, self.folder_path, file_name_saved)
 
         if not isinstance(file_name_saved, str):
+            self.__class__.logger.error("Falscher Dateiname")
             return False, "Falscher Dateiname"
 
         if not isinstance(file_data, pd.DataFrame):
             if ValueError:
+                self.__class__.logger.error("Fehlende Daten in der Tabelle")
                 return False, "Fehlende Daten in der Tabelle"
 
         f_nan = file_data.isna().any()  # Variablen geben boolesche Werte zurück, wo NaN vorhanden ist.
@@ -233,17 +273,21 @@ class CostOfLiving:
             # Zeige die Einträge mit fehlenden Daten an.
             file_data_lost = file_data[file_data.isna().any(axis=1)]
             position = file_data_lost.iloc[:,[1]] # Zeige nur Index und Spalte 1
+            self.__class__.logger.error(f"Wichtige Daten fehlen in der Tabelle an Position: \n{position}")
             return False, f"Wichtige Daten fehlen in der Tabelle an Position: \n{position}"
 
         if file_path:
             try:
                 # Speichere die Datei
                 file_data.to_csv(file_path, index=True, index_label="Index")
+                self.__class__.logger.info(f"Datei wurde unter dem Namen gespeichert: {file_name_saved}")
                 return True, f"Datei wurde unter dem Namen gespeichert: {file_name_saved}"
             except Exception as e:
-                 return False, f"Fehler {str(e)}"
+                self.__class__.logger.error(f"Fehler {str(e)}")
+                return False, f"Fehler {str(e)}"
         else:
-            return False, f"Das Verzeichnis wurde nicht erstellt oder ist ungültig."
+            self.__class__.logger.error("Das Verzeichnis wurde nicht erstellt oder ist ungültig.")
+            return False, "Das Verzeichnis wurde nicht erstellt oder ist ungültig."
 
     def clean_data_duplicat_drop(self, verbose=False):
         """
@@ -265,7 +309,8 @@ class CostOfLiving:
                 - int: Anzahl der entfernten Daten.
         """
         if not isinstance(self.df, pd.DataFrame):
-            return None, f"Es muss ein DataFrame sein."
+            self.__class__.logger.error("Es muss ein DataFrame sein.")
+            return None, "Es muss ein DataFrame sein."
 
         initial_row = len(self.df)
         # Identifizierung und Entfernung von Duplikatdaten.
@@ -281,8 +326,10 @@ class CostOfLiving:
 
         # Gibt mehr Informationen zurück, wenn verbose auf True gesetzt ist
         if verbose:
+            self.__class__.logger.info("Detaillierte Datenanzeige")
             return self.df, initial_row, total_row, duplicat_row, drop_row, duplicat_data, drop_data
 
+        self.__class__.logger.info("Datenanzeige")
         return self.df, total_row, duplicat_row, drop_row
 
     def correlation_cost_living_rent(self, continent=None):
@@ -309,8 +356,10 @@ class CostOfLiving:
             cleaned_data.reset_index(drop=True, inplace=True) # Löschen des Index
             cleaned_data.index += 1  # Hinzufügen eines Index von Nummer 1
 
+            self.__class__.logger.info("Datenbereinigung")
             return cleaned_data
         else:
+            self.__class__.logger.error("Es ist kein gültiges DataFrame. Die Daten sind nicht bereinigbar.")
             return "Es ist kein gültiges DataFrame."
 
 
@@ -324,7 +373,7 @@ class CostOfLiving:
 
 
 # obj = CostOfLiving()  # Objekt erstellen
-
+#
 # # Die Kontinente, die hinzugefügt werden.
 # file_name = 'Cost_of_Living_Index_by_Country_2024.csv'
 # info_continent = obj.add_country()

@@ -1,5 +1,6 @@
 # Systembibliothek importieren
 import os.path
+import logging
 
 # Externe Bibliothek importieren
 import matplotlib.pyplot as plt
@@ -11,6 +12,19 @@ from Statistiken import CostOfLiving
 
 
 class Diagrams:
+    # Informationen über Logs.
+    logger = logging.getLogger()  # Erhalte den standardmäßigen Logger.
+    consol_handler = logging.StreamHandler()  # Erstellen eines Handlers für die Konsole.
+    file_handler = logging.FileHandler("diagramm.log")  # Erstellen eines Handlers für die Datei.
+
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")  # Die Anzeigeart der Log-Nachrichten
+    consol_handler.setFormatter(formatter)  # Lege das Format des Handlers fest.
+    file_handler.setFormatter(formatter)  # Lege das Format des Handlers fest.
+
+    logger.addHandler(file_handler)  # Erstelle den Handler.
+    logger.addHandler(consol_handler)  # Anzeige in der Konsole.
+    logger.setLevel(logging.INFO)  # Das minimale Log-Level.
+
     def __init__(self):
         self.folder_path = "diagramm"  # Die Dateipfade
         self.obj = CostOfLiving()  # Es wird nur einmal aufgerufen, weil die Daten sich nicht ändern.
@@ -30,7 +44,8 @@ class Diagrams:
 
         # Es wird überprüft, ob die Daten vom Typ DataFrame sind.
         if not isinstance(d[0], pd.DataFrame):
-            return f"Fehler. Die Daten müssen vom Typ DataFrame sein."
+            logging.error("Fehler. Die Daten müssen vom Typ DataFrame sein.")
+            return "Fehler. Die Daten müssen vom Typ DataFrame sein."
 
         x = d[0]['Country'].to_numpy()  # Umwandlung einer Serie in ein Array
         y = d[0]['Cost of Living Index'].to_numpy() # Umwandlung einer Serie in ein Array
@@ -49,8 +64,10 @@ class Diagrams:
 
         try:
             plt.show(block=False)  # Diagramm anzeigen
+            logging.info("Das Diagramm anzeigen.")
             plt.pause(3)  # Es pausiert für einigen Sekunden, damit das Diagramm sichtbar bleibt.
         finally:
+            logging.info("Das Diagramm wird geschlossen.")
             plt.close(self.fig)  # Das Diagramm wird geschlossen.
 
         return self.fig.get_suptitle()
@@ -62,8 +79,10 @@ class Diagrams:
         """
         try:
             if not os.path.exists(self.folder_path):  # Überprüfen, ob das Verzeichnis existiert.
+                logging.info(f"Erstelle ein Verzeichnis {self.folder_path}")
                 os.makedirs(self.folder_path, mode=0o777)  # Erstelle ein Verzeichnis mit den Rechten 777
         except Exception as e:
+            logging.error(f"Fehler {e}")
             return f"Fehler {e}"
 
         return True
@@ -105,8 +124,10 @@ class Diagrams:
 
         try:
             plt.show(block=False)  # Diagramm anzeigen
+            logging.info("Das Diagramm anzeigen.")
             plt.pause(3)  # Es pausiert für einigen Sekunden, damit das Diagramm sichtbar bleibt.
         finally:
+            logging.info("Das Diagramm wird geschlossen.")
             plt.close(self.fig)  # Das Diagramm wird geschlossen.
 
         return diagramm_title
@@ -118,13 +139,15 @@ class Diagrams:
         :return: str - der Status der Speicherung
         """
         file_name = file_name + '.png'  # Zur Diagrammbezeichnung wird auch die Dateierweiterung hinzugefügt.
-        if self.dir_check() is not True:  #
+        if self.dir_check() is not True:
+            logging.error(f"Das Verzeichnis ({self.folder_path}) existiert nicht oder kann nicht erstellt werden.")
             return f"Das Verzeichnis ({self.folder_path}) existiert nicht oder kann nicht erstellt werden."
 
         file_name = os.path.join("diagramm", file_name)
         while True:
             if not os.path.isfile(file_name):  # Überprüfen, ob das Verzeichnis existiert.
                 self.fig.savefig(file_name, dpi=150, bbox_inches='tight')  # Die Datei speichern
+                logging.info(f"Die Datei wurde in der {file_name} gespeichert.")
                 return "Die Datei wurde gespeichert!"
 
             # 1, um erneut zu speichern, und 2, um nicht erneut zu speichern.
@@ -133,10 +156,13 @@ class Diagrams:
             try:
                 if int(inp) == 1:
                     self.fig.savefig(file_name, dpi=150, bbox_inches='tight')  # Die Datei speichern
-                    return "Die Datei wurde erneut gespeichert!"
+                    logging.info(f"Die gewählte Option war, die Datei {file_name} erneut zu speichern.")
+                    return "Die Datei wurde erneut gespeichert."
                 elif int(inp) == 2:
+                    logging.info("Die gewählte Option war, die Datei nicht zu speichern.")
                     return "Die Datei wurde nicht erneut gespeichert!"
             except ValueError:
+                logging.info("Es wurde keine richtige Option ausgewählt.")
                 print("Es wurde keine Option ausgewählt.")
 
 
@@ -148,8 +174,8 @@ class Diagrams:
 #
 # mesaj_save = diag.save(cost_of_liv)  # Diagramm speichern
 # print(mesaj_save,'\n\n')
-#
-#
+# #
+# #
 # # Das Diagramm der Korrelation
 # country_select = "Europe" # None oder ein Kontinentname
 #
