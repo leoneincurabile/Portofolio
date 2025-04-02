@@ -3,6 +3,7 @@ import os.path
 
 # Externe Bibliothek importieren
 import pandas as pd
+from pandas.core.interchange.dataframe_protocol import DataFrame
 
 # lokal importieren
 from log import setup_logger
@@ -100,7 +101,7 @@ class CostOfLiving:
         try:
             if not os.path.exists(self.folder_path):  # Überprüfen, ob das Verzeichnis existiert.
                 os.makedirs(self.folder_path, mode=0o777)  # Erstelle ein Verzeichnis mit den Rechten 777
-                self.__class__.logger.info(f"S-a creat diredtorul: {self.folder_path}")
+                self.__class__.logger.info(f"Das Verzeichnis wurde erstellt: {self.folder_path}")
         except Exception as e:
             self.__class__.logger.error(f"Fehler bei der Überprüfung/Erstellung des Verzeichnisses: {e}.")
             return f"Fehler {e}"
@@ -240,6 +241,82 @@ class CostOfLiving:
         self.__class__.logger.info(f"Anzeige von Informationen {self.top_10_high_cost_country.__name__}")
         return high_cost, 'top 10 high cost country.csv'
 
+    def clean_data_duplicat_drop(self, verbose=False):
+        """
+        Bereinige die Daten, indem du Duplikate und NaN-Werte entfernst.
+        :param verbose: True | False
+        :return: tuple
+            => verbose = True:
+                - Dataframe: Die bereinigten Daten.
+                - int: Anzahl der ursprünglichen Daten.
+                - int: Anzahl der verbleibenden Daten.
+                - int: Anzahl der Duplikatdaten.
+                - int: Anzahl der entfernten Daten.
+                - dataframe: Duplikatdaten.
+                - dataframe: Entfernte Daten.
+                - str: Der Name der bereinigten Daten
+            => verbose = False:
+                - Dataframe: Die bereinigten Daten.
+                - int: Anzahl der verbleibenden Daten.
+                - int: Anzahl der Duplikatdaten.
+                - int: Anzahl der entfernten Daten.
+                - str: Der Name der bereinigten Daten
+        """
+        if not isinstance(self.df, pd.DataFrame):
+            self.__class__.logger.error("Es muss ein DataFrame sein.")
+            return None, "Es muss ein DataFrame sein."
+
+        initial_row = len(self.df)
+        # Identifizierung und Entfernung von Duplikatdaten.
+        duplicat_data = self.df[self.df.duplicated()]  # Gibt die duplizierten Daten zurück.
+        self.df = self.df.drop_duplicates()  # Eliminiere die doppelten Daten.
+        duplicat_row = len(duplicat_data)  # Anzahl der Duplikate
+
+        # Identifizierung und Entfernung von NaN-Daten
+        drop_data = self.df[self.df.isna().any(axis=1)]  # Extrahiere die Daten, die mindestens einen NaN-Wert enthalten
+        self.df = self.df.dropna()  # Lösche die Datensätze ohne Daten
+        drop_row = len(drop_data)  # Anzahl der entfernten Daten
+        total_row = len(self.df)  # Gesamtzahl der bereinigten Daten
+
+        # Gibt mehr Informationen zurück, wenn verbose auf True gesetzt ist
+        if verbose:
+            self.__class__.logger.info("Detaillierte Datenanzeige")
+            return (self.df, initial_row, total_row, duplicat_row, drop_row, duplicat_data,
+                    drop_data, "Die bereinigten Daten.csv")
+
+        self.__class__.logger.info("Datenanzeige")
+        return self.df, total_row, duplicat_row, drop_row, "Die bereinigten Daten.csv"
+
+    def corr_cost_living_rent(self, continent=None):
+        """
+        Data Clean
+        :param continent: None | Str
+        :return: dataframe | str
+        """
+        cleaned_data = self.clean_data_duplicat_drop()[0]  # Die bereinigten Daten
+
+        # Wenn cleaned_data ein DataFrame ist
+        if isinstance(cleaned_data, pd.DataFrame):
+
+            # Anzeigen nur der Spalten mit den erforderlichen Daten
+            cleaned_data =  cleaned_data.iloc[:]
+
+            # Daten nach Kontinent filtern, wenn angegeben
+            if continent:
+                cleaned_data = cleaned_data[(cleaned_data['Continent'] == continent)]
+
+            # Sortierung basierend auf dem Cost of Living Index in absteigender Reihenfolge
+            cleaned_data = cleaned_data.sort_values(by = "Cost of Living Index", ascending = False)
+
+            cleaned_data.reset_index(drop=True, inplace=True) # Löschen des Index
+            cleaned_data.index += 1  # Hinzufügen eines Index von Nummer 1
+
+            self.__class__.logger.info("Datenbereinigung")
+            return cleaned_data
+        else:
+            self.__class__.logger.error("Es ist kein gültiges DataFrame. Die Daten sind nicht bereinigbar.")
+            return "Es ist kein gültiges DataFrame."
+
     def save_file(self, file_data:pd.DataFrame, file_name_saved:str):
         """
         # Speichern Sie die Datei mit den geladenen Daten. Sie muss zuerst ein DataFrame und dann den Dateinamen enthalten.
@@ -285,79 +362,6 @@ class CostOfLiving:
             self.__class__.logger.error("Das Verzeichnis wurde nicht erstellt oder ist ungültig.")
             return False, "Das Verzeichnis wurde nicht erstellt oder ist ungültig."
 
-    def clean_data_duplicat_drop(self, verbose=False):
-        """
-        Bereinige die Daten, indem du Duplikate und NaN-Werte entfernst.
-        :param verbose: True | False
-        :return: tuple
-            => verbose = True:
-                - Dataframe: Die bereinigten Daten.
-                - int: Anzahl der ursprünglichen Daten.
-                - int: Anzahl der verbleibenden Daten.
-                - int: Anzahl der Duplikatdaten.
-                - int: Anzahl der entfernten Daten.
-                - dataframe: Duplikatdaten.
-                - dataframe: Entfernte Daten.
-            => verbose = False:
-                - Dataframe: Die bereinigten Daten.
-                - int: Anzahl der verbleibenden Daten.
-                - int: Anzahl der Duplikatdaten.
-                - int: Anzahl der entfernten Daten.
-        """
-        if not isinstance(self.df, pd.DataFrame):
-            self.__class__.logger.error("Es muss ein DataFrame sein.")
-            return None, "Es muss ein DataFrame sein."
-
-        initial_row = len(self.df)
-        # Identifizierung und Entfernung von Duplikatdaten.
-        duplicat_data = self.df[self.df.duplicated()]  # Gibt die duplizierten Daten zurück.
-        self.df = self.df.drop_duplicates()  # Eliminiere die doppelten Daten.
-        duplicat_row = len(duplicat_data)  # Anzahl der Duplikate
-
-        # Identifizierung und Entfernung von NaN-Daten
-        drop_data = self.df[self.df.isna().any(axis=1)]  # Extrahiere die Daten, die mindestens einen NaN-Wert enthalten
-        self.df = self.df.dropna()  # Lösche die Datensätze ohne Daten
-        drop_row = len(drop_data)  # Anzahl der entfernten Daten
-        total_row = len(self.df)  # Gesamtzahl der bereinigten Daten
-
-        # Gibt mehr Informationen zurück, wenn verbose auf True gesetzt ist
-        if verbose:
-            self.__class__.logger.info("Detaillierte Datenanzeige")
-            return self.df, initial_row, total_row, duplicat_row, drop_row, duplicat_data, drop_data
-
-        self.__class__.logger.info("Datenanzeige")
-        return self.df, total_row, duplicat_row, drop_row
-
-    def correlation_cost_living_rent(self, continent=None):
-        """
-        Corelatia dintre Cost of Living Index si Rent Index
-        :param continent: None | Str
-        :return: dataframe | str
-        """
-        cleaned_data = self.clean_data_duplicat_drop()[0]  # Die bereinigten Daten
-
-        # Wenn cleaned_data ein DataFrame ist
-        if isinstance(cleaned_data, pd.DataFrame):
-
-            # Anzeigen nur der Spalten mit den erforderlichen Daten
-            cleaned_data =  cleaned_data.iloc[:]
-
-            # Daten nach Kontinent filtern, wenn angegeben
-            if continent:
-                cleaned_data = cleaned_data[(cleaned_data['Continent'] == continent)]
-
-            # Sortierung basierend auf dem Cost of Living Index in absteigender Reihenfolge
-            cleaned_data = cleaned_data.sort_values(by = "Cost of Living Index", ascending = False)
-
-            cleaned_data.reset_index(drop=True, inplace=True) # Löschen des Index
-            cleaned_data.index += 1  # Hinzufügen eines Index von Nummer 1
-
-            self.__class__.logger.info("Datenbereinigung")
-            return cleaned_data
-        else:
-            self.__class__.logger.error("Es ist kein gültiges DataFrame. Die Daten sind nicht bereinigbar.")
-            return "Es ist kein gültiges DataFrame."
-
     def __str__(self):
         """
         Zeige Informationen aus der Datenbank an, d.h. die Gesamtzahl der Länder und
@@ -372,7 +376,6 @@ class CostOfLiving:
 # file_name = 'Cost_of_Living_Index_by_Country_2024.csv'
 # info_continent = obj.add_country()
 # print("Kontinent zum CSV hinzufügen:",info_continent)
-#
 #
 # # Alle Daten werden in CSV gespeichert.
 # save_continent = CostOfLiving.save_country_to_csv(info_continent, file_name)
@@ -392,11 +395,22 @@ class CostOfLiving:
 #     print("In Datei speichern: ", save_top_10_cost_c[1])
 #
 #
+# # Die bereinigten Daten aus der CSV
+# clean_csv_data = obj.clean_data_duplicat_drop()
+# clean_csv_data_df = clean_csv_data[0]  # Dataframe
+# clean_csv_data_title = clean_csv_data[-1]  # Der Name der bereinigten Daten
+#
+# # Daten speichern
+# if isinstance( clean_csv_data_df, pd.DataFrame):
+#     clean_csv_data_sv = obj.save_file(clean_csv_data_df, clean_csv_data_title)
+#     print(clean_csv_data_sv)
+#
+#
 # # Generierung von Daten für Korrelation
 # clean = obj.clean_data_duplicat_drop(verbose=True)
 # continent_selected = "Africa"
 # # Zeige das DataFrame basierend auf dem ausgewählten Land, falls gewünscht.
-# correlation = obj.correlation_cost_living_rent(continent_selected)
+# correlation = obj.corr_cost_living_rent(continent_selected)
 # print(correlation)
 #
 # # Daten speichern

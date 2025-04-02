@@ -23,6 +23,20 @@ class Diagrams:
             Diagrams.logger = setup_logger("Diagramm")
         self.logger = Diagrams.logger
 
+    def dir_check(self):
+        """
+        Überprüfe, ob das Verzeichnis existiert. Falls nicht, erstelle es.
+        :return: True | str - der Status des Verzeichnisses
+        """
+        try:
+            if not os.path.exists(self.folder_path):  # Überprüfen, ob das Verzeichnis existiert.
+                self.logger.info(f"Erstelle ein Verzeichnis {self.folder_path}.")
+                os.makedirs(self.folder_path, mode=0o777)  # Erstelle ein Verzeichnis mit den Rechten 777
+        except Exception as e:
+            self.logger.error(f"Fehler {e}.")
+            return f"Fehler {e}"
+
+        return True
 
     def diag_cost_of_living(self, cost_of_living:int):
         """
@@ -66,21 +80,6 @@ class Diagrams:
 
         return self.fig.get_suptitle()
 
-    def dir_check(self):
-        """
-        Überprüfe, ob das Verzeichnis existiert. Falls nicht, erstelle es.
-        :return: True | str - der Status des Verzeichnisses
-        """
-        try:
-            if not os.path.exists(self.folder_path):  # Überprüfen, ob das Verzeichnis existiert.
-                self.logger.info(f"Erstelle ein Verzeichnis {self.folder_path}.")
-                os.makedirs(self.folder_path, mode=0o777)  # Erstelle ein Verzeichnis mit den Rechten 777
-        except Exception as e:
-            self.logger.error(f"Fehler {e}.")
-            return f"Fehler {e}"
-
-        return True
-
     def corr_cost_rent(self, continent= None):
         """
         Die Anzeige des Diagramms zur Korrelation zwischen dem Lebenshaltungskostenindex und dem Rent Index,
@@ -89,20 +88,23 @@ class Diagrams:
         :return: str - die Titel
         """
         # Analysierte Daten
-        correlation_data = self.obj.correlation_cost_living_rent(continent)
+        process_data = self.obj.corr_cost_living_rent(continent)
 
         # Etikett der gewünschten anzuzeigenden Daten
         x1, x2 = ('Cost of Living Index','Lebenshaltungskostenindex')
         y1, y2 = ('Rent Index','Mietindex')
 
+        if (x1 and x2) in process_data.columns:
+            print("Da")
+
         # Streudiagramm mit einer Regressionslinie
-        sns.regplot(x=x1, y=y1, data=correlation_data, ci=None)
+        sns.regplot(x=x1, y=y1, data=process_data, ci=None)
 
         # Für jede Zeile im DataFrame werden die Ländernamen basierend auf der Position abgerufen,
         # die jeder Wert in x bzw. y einnimmt.
-        for i in range(correlation_data.shape[0]):
-            plt.text(correlation_data[x1].iloc[i], correlation_data[y1].iloc[i],
-                     correlation_data['Country'].iloc[i], fontsize=9, ha='right', color='green')
+        for i in range(process_data.shape[0]):
+            plt.text(process_data[x1].iloc[i], process_data[y1].iloc[i],
+                     process_data['Country'].iloc[i], fontsize=9, ha='right', color='green')
 
         # Informationen zum Diagramm
         plt.title(f"Korrelation zwischen {x2} und {y2}")  # Die Titel
@@ -138,8 +140,18 @@ class Diagrams:
            7. Schließt abschließend die Figur und protokolliert die Aktion.
         :return: Titel
         """
-        correlation_matrix = self.obj.correlation_cost_living_rent()  # Analysierte Daten
-        correlation_matrix = correlation_matrix.select_dtypes(include=['number'])  # Zeige nur die numerischen Daten an.
+        data = self.obj.clean_data_duplicat_drop()  # Analysierte Daten
+        data_df = data[0]
+
+        if not isinstance(data_df, pd.DataFrame):  # Überprüfen, ob ein DataFrame existiert
+            self.logger.info("Die Daten sind in einem ungültigen Format.")
+            return None
+
+        if data_df.empty:  # Überprüfen, ob das DataFrame leer ist
+            self.logger.info("Es gibt keine Daten.")
+            return None
+
+        correlation_matrix = data_df.select_dtypes(include=['number'])  # Zeige nur die numerischen Daten an.
 
         if 'Rank' in correlation_matrix.columns:
             # Überprüfen, ob die Spalte existiert, um sie nicht anzuzeigen.
@@ -175,10 +187,20 @@ class Diagrams:
            4. Setzt den Titel des Diagramms sowie die Achsentitel.
            5. Zeigt das Diagramm an und protokolliert die Aktion.
            6. Schließt abschließend das Diagramm und protokolliert die Aktion.
-        :return: Titel
+        :return: None | Titel
         """
-        data = self.obj.correlation_cost_living_rent()  # Analysierte Daten
-        data_fil = data['Cost of Living Index']  # Wähle nur die gewünschten Daten aus, Lebenshaltungskostenindex
+        data = self.obj.clean_data_duplicat_drop()  # Analysierte Daten
+        data_df = data[0]
+
+        if not isinstance(data_df, pd.DataFrame):  # Überprüfen, ob ein DataFrame existiert
+            self.logger.info("Die Daten sind in einem ungültigen Format.")
+            return None
+
+        if data_df.empty:  # Überprüfen, ob das DataFrame leer ist
+            self.logger.info("Es gibt keine Daten.")
+            return None
+
+        data_fil = data_df['Cost of Living Index']  # Wähle nur die gewünschten Daten aus, Lebenshaltungskostenindex
 
         self.fig = plt.gcf() # Aktuelle Figur abrufen
         self.fig.set_size_inches(14,6) # Diagrammgröße
@@ -202,12 +224,60 @@ class Diagrams:
 
         return titel
 
+    def histo_restaurant(self):
+        """
+        Erstellt und zeigt ein Histogramm basierend auf dem Restaurantindex an.
+        :return: str - Diagrammtitel
+                 Zeige das Histogramm
+        """
+        data = self.obj.clean_data_duplicat_drop()  # Analysierte Daten
+        data_df = data[0]
+
+        if not isinstance(data_df, pd.DataFrame):  # Überprüfen, ob ein DataFrame existiert
+            self.logger.info("Die Daten sind in einem ungültigen Format.")
+            return None
+
+        if data_df.empty:  # Überprüfen, ob das DataFrame leer ist
+            self.logger.info("Es gibt keine Daten.")
+            return None
+
+        if "Restaurant Price Index" not in data_df.columns:
+            return None  # altceva de scris aici
+
+        data_hist = data_df["Restaurant Price Index"]  # Wähle nur die gewünschten Daten aus
+        plt.hist(data_hist, bins=25)  # Diagrammtyp
+
+        self.fig = plt.gcf()  # Aktuelle Figur abrufen
+
+        #Setze die Titel un ax name.
+        plt.title("Verteilung des Restaurantindex")
+        plt.xlabel("Restaurant Price Index")
+        plt.ylabel("Häufigkeit")
+
+        ax = plt.gca()  # Aktuelle Achsen abrufen
+        titel = ax.get_title()  # Extrahiere den Diagrammtitel
+
+        try:
+            plt.show(block=False)  # Diagramm anzeigen
+            self.logger.info(f"Das Diagramm {titel} anzeigen.")
+            plt.pause(3)
+        finally:
+            plt.close(self.fig)  # Diagramm geschlossen
+            self.logger.info(f"Das Diagramm {titel} wurde geschlossen.")
+
+        return titel
+
+
     def save(self, file_name):
         """
         Die Datei speichern.
         :param file_name: str - der Name der Detei
         :return: str - der Status der Speicherung
         """
+
+        if file_name is None:
+            self.logger.info("Es gibt kein gültiges Diagramm zum Speichern.")
+            return "Es gibt kein gültiges Diagramm zum Speichern."
 
         file_name = file_name + '.png'  # Zur Diagrammbezeichnung wird auch die Dateierweiterung hinzugefügt.
         if self.dir_check() is not True:
@@ -227,7 +297,6 @@ class Diagrams:
             try:
                 if int(inp) == 1:
                     self.fig.savefig(file_name, dpi=150, bbox_inches='tight')  # Die Datei speichern
-                    print(file_name)
                     self.logger.info(f"Die gewählte Option war, die Datei erneut zu speichern.")
                     return "Die Datei wurde erneut gespeichert."
                 elif int(inp) == 2:
@@ -249,26 +318,31 @@ class Diagrams:
 #
 # mesaj_save = diag.save(cost_of_liv)  # Diagramm speichern
 # print(mesaj_save,'\n\n')
-# #
-# #
+#
+#
 # # Das Diagramm der Korrelation
 # country_select = "Europe" # None oder ein Kontinentname
-#
 # # Zeige das Korrelationsdiagramm mit oder ohne Kontinentfilter.
 # corr_cost_liv_rent = diag.corr_cost_rent(country_select)
 #
 # corr_cost_liv_rent_sv = diag.save(corr_cost_liv_rent) # Korrelationsdiagramm speichern
 # print(corr_cost_liv_rent_sv)
-
+#
+#
 # # Zeige das Wärmekarte-Diagramm
 # heat_diag = diag.heat_diagramm()
 #
 # heat_diag_sv = diag.save(heat_diag) # Wärmekarte-Diagramm speichern
 # print(heat_diag_sv)
-
-
+#
+#
 # # Zeige das Boxplot-Diagramm
 # box_cost_living = diag.boxplot_cost_living()
-
-# box_cost_living_sv = diag.save(box_cost_living)
+#
+# box_cost_living_sv = diag.save(box_cost_living)  # Diagramm speichern
 # print(box_cost_living_sv)
+
+# # Zeige das Histo Diagram
+# histo_diag = diag.histo_restaurant()
+#
+# histo_diag_sv = diag.save(histo_diag)  # Diagramm speichern
