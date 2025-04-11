@@ -3,7 +3,6 @@ import os.path
 
 # Externe Bibliothek importieren
 import pandas as pd
-from pandas.core.interchange.dataframe_protocol import DataFrame
 
 # lokal importieren
 from log import setup_logger
@@ -23,10 +22,9 @@ class CostOfLiving:
 
         # Setze die Anzeige aller Spalten und aller Zeilen
         pd.set_option('display.max_columns', None, 'display.max_rows', None)
-        self.folder_path = 'daten'
+        self.folder_path = os.path.join('Cost_of_Living', 'daten')
 
-
-        name_file = 'Cost_of_Living_Index_by_Country_2024.csv'
+        name_file = os.path.join('Cost_of_Living', 'Cost_of_Living_Index_by_Country_2024.csv')
         try:
             self.df = pd.read_csv(name_file)
             self.__class__.logger.info(f"Die Datei {name_file} wurde erfolgreich geöffnet.")
@@ -181,6 +179,7 @@ class CostOfLiving:
 
             # Wenn die Daten vom Typ DataFrame sind, wird die Datei gespeichert.
             if isinstance(file_data, pd.DataFrame):
+                file_name_c_save = os.path.join('Cost_of_Living', file_name_c_save)
                 file_data.to_csv(file_name_c_save, mode='w', header=True, index=False)
                 cls.logger.info(f"Die Daten mit Kontinent wurden der Datei ({file_name_c_save}) hinzugefügt.")
                 return True, f"Die Daten mit Kontinent wurden der Datei ({file_name_c_save}) hinzugefügt."
@@ -289,10 +288,33 @@ class CostOfLiving:
 
     def corr_cost_living_rent(self, continent=None):
         """
-        Data Clean
-        :param continent: None | Str
-        :return: dataframe | str
+        Überprüft und sortiert die Daten zum Mietpreis basierend auf dem Mietpreisindex.
+
+        Diese Funktion überprüft, ob die Daten bereits bereinigt wurden und sortiert die Daten dann in
+        absteigender Reihenfolge des Mietpreisindex. Es ermöglicht auch die Filterung der Daten nach einem optional
+        angegebenen Kontinent.
+        Nach der Sortierung wird der Index zurückgesetzt, um bei 1 zu beginnen, und die Funktion gibt ein bereinigtes
+        und sortiertes DataFrame zurück.
+
+        Wenn die Daten kein gültiges DataFrame sind, gibt die Funktion eine Fehlermeldung zurück.
+
+        :param
+        continent : str, optional
+            Ein optionaler Parameter, der einen Kontinent zur Filterung der Daten angibt.
+            Wenn nicht angegeben, werden alle Daten berücksichtigt.
+
+        :return
+        cleaned_data : pd.DataFrame
+            Ein bereinigtes und sortiertes DataFrame mit zurückgesetztem Index.
+            Wenn die Daten kein gültiges DataFrame sind, wird eine Fehlermeldung zurückgegeben.
+
+        Beispiele:
+        - Wenn Sie die Daten für Europa möchten:
+          corr_cost_living_rent(continent='Europe')
+        - Wenn Sie die Daten nicht nach Kontinent filtern möchten:
+          corr_cost_living_rent()
         """
+
         cleaned_data = self.clean_data_duplicat_drop()[0]  # Die bereinigten Daten
 
         # Wenn cleaned_data ein DataFrame ist
@@ -369,6 +391,7 @@ class CostOfLiving:
         :return:
         """
         return f"Das Objekt CostOfLiving mit {len(self.df)} Ländern und {self.df.shape[1]} Variablen"
+
 
 # obj = CostOfLiving()  # Objekt erstellen
 #

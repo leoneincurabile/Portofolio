@@ -14,7 +14,7 @@ class Diagrams:
     logger = None
 
     def __init__(self):
-        self.folder_path = "diagramm"  # Die Dateipfade
+        self.folder_path = os.path.join("Cost_of_Living","diagramm")  # Die Dateipfade
         self.obj = CostOfLiving()  # Es wird nur einmal aufgerufen, weil die Daten sich nicht ändern.
         self.fig, self.ax = None, None  # Platzhalter für die Matplotlib-Figur und Achsen
 
@@ -284,7 +284,7 @@ class Diagrams:
             self.logger.error(f"Das Verzeichnis ({self.folder_path}) existiert nicht oder kann nicht erstellt werden.")
             return f"Das Verzeichnis ({self.folder_path}) existiert nicht oder kann nicht erstellt werden."
 
-        file_name = os.path.join("diagramm", file_name)
+        file_name = os.path.join(self.folder_path, file_name)
         while True:
             if not os.path.isfile(file_name):  # Überprüfen, ob das Verzeichnis existiert.
                 self.fig.savefig(file_name, dpi=150, bbox_inches='tight')  # Die Datei speichern
@@ -341,7 +341,7 @@ class Diagrams:
 #
 # box_cost_living_sv = diag.save(box_cost_living)  # Diagramm speichern
 # print(box_cost_living_sv)
-
+#
 # # Zeige das Histo Diagram
 # histo_diag = diag.histo_restaurant()
 #
